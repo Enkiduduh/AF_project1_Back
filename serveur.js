@@ -4,9 +4,8 @@ const bodyParser = require("body-parser");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
 const cors = require("cors");
-require('dotenv').config();
+require("dotenv").config();
 const app = express();
-const JWT_SECRET = "secretkey"; // Secret pour le JWT
 
 // Middleware
 app.use(bodyParser.json());
@@ -39,7 +38,7 @@ const authenticateToken = (req, res, next) => {
 
   if (!token) return res.sendStatus(401); // Si aucun token n'est trouvé
 
-  jwt.verify(token, JWT_SECRET, (err, user) => {
+  jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
     if (err) return res.sendStatus(403); // Token invalide
     req.user = user; // Ajouter les infos du token à la requête
     next();
@@ -101,7 +100,7 @@ app.post("/api/login", (req, res) => {
 // Endpoint pour récupérer les infos de l'utilisateur via le JWT
 app.get("/api/user", authenticateToken, (req, res) => {
   const query =
-    "SELECT id, firstname, lastname, email, address, dateOfCreation FROM Users WHERE id = ?";
+    "SELECT id, firstname, lastname, email, address, mobile, dateOfCreation FROM Users WHERE id = ?";
   connection.query(query, [req.user.id], (error, results) => {
     if (error) {
       res.status(500).json({ error: "Internal server error" });
@@ -121,18 +120,35 @@ app.listen(3000, () => {
   console.log("Server is running on port 3000");
 });
 
+//GET pour récupérer l'ensemble des ORDERS d'un USER
+app.get("/api/orders", authenticateToken, (req, res) => {
+  const query = "SELECT * FROM Orders WHERE userId = ?";
+  connection.query(query, [req.user.id], (error, results) => {
+    if (error) {
+      res.status(500).json({ error: "Internal server error" });
+      return;
+    }
+    if (results.length > 0) {
+      res.json(results); // Renvoie les commandes obtenues
+    } else {
+      res.status(404).json({ error: "No orders found" });
+    }
+  });
+});
 
+
+//GET pour récuperer l'ensemble des PRODUCTS
 app.get("/api/products", (req, res) => {
   const query = "SELECT * FROM Products";
-    connection.query(query, (error, results) => {
-      if (error) {
-        res.status(500).json({ error: "Internal server error" });
-        return;
-      }
-      if (results.length > 0) {
-        res.json(results); // Renvoie les produits obtenus
-      } else {
-        res.status(404).json({ error: "No products found" });
-      }
-    });
+  connection.query(query, (error, results) => {
+    if (error) {
+      res.status(500).json({ error: "Internal server error" });
+      return;
+    }
+    if (results.length > 0) {
+      res.json(results); // Renvoie les produits obtenus
+    } else {
+      res.status(404).json({ error: "No products found" });
+    }
+  });
 });
