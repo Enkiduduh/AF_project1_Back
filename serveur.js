@@ -70,7 +70,7 @@ app.post("/api/login", (req, res) => {
             address: user.address,
             dateOfCreation: user.dateOfCreation,
           },
-          JWT_SECRET,
+          process.env.JWT_SECRET,
           {
             expiresIn: "1h",
           }
