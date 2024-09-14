@@ -136,6 +136,28 @@ app.get("/api/orders", authenticateToken, (req, res) => {
   });
 });
 
+//GET pour récupérer l'ensemble des ORDERPRODUCTS d'un USER
+app.get("/api/orderProducts", authenticateToken, (req, res) => {
+  const query = `
+    SELECT OrderProducts.productId, OrderProducts.quantity
+    FROM OrderProducts
+    INNER JOIN Orders ON Orders.id = OrderProducts.orderId
+    WHERE Orders.userId = ?
+  `;
+  connection.query(query, [req.user.id], (error, results) => {
+    if (error) {
+      res.status(500).json({ error: "Internal server error" });
+      return;
+    }
+    if (results.length > 0) {
+      res.json(results); // Renvoie les produits associés aux commandes de l'utilisateur
+    } else {
+      res.status(404).json({ error: "No product references found for the user" });
+    }
+  });
+});
+
+
 
 //GET pour récuperer l'ensemble des PRODUCTS
 app.get("/api/products", (req, res) => {
