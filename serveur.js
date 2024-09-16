@@ -115,6 +115,65 @@ app.get("/api/user", authenticateToken, (req, res) => {
   });
 });
 
+// Endpoint pour Modifier les infos de l'utilisateur
+app.put("/api/user", authenticateToken, (req, res) => {
+  // Récupérer les données envoyées dans le body
+  const { firstname, lastname, email, address, mobile } = req.body;
+
+  // Construire une requête dynamique en fonction des champs envoyés
+  let fieldsToUpdate = [];
+  let values = [];
+
+  if (firstname) {
+    fieldsToUpdate.push("firstname = ?");
+    values.push(firstname);
+  }
+  if (lastname) {
+    fieldsToUpdate.push("lastname = ?");
+    values.push(lastname);
+  }
+  if (email) {
+    fieldsToUpdate.push("email = ?");
+    values.push(email);
+  }
+  if (address) {
+    fieldsToUpdate.push("address = ?");
+    values.push(address);
+  }
+  if (mobile) {
+    fieldsToUpdate.push("mobile = ?");
+    values.push(mobile);
+  }
+
+  // Si aucun champ n'est fourni, retourner une erreur
+  if (fieldsToUpdate.length === 0) {
+    return res.status(400).json({ error: "No fields provided for update" });
+  }
+
+  // Ajouter l'ID utilisateur à la liste des valeurs
+  values.push(req.user.id);
+
+  // Requête SQL dynamique
+  const query = `
+   UPDATE Users
+   SET ${fieldsToUpdate.join(", ")}
+   WHERE id = ?
+ `;
+
+  // Exécution de la requête de mise à jour
+  connection.query(query, values, (error, results) => {
+    if (error) {
+      return res.status(500).json({ error: "Internal server error" });
+    }
+
+    if (results.affectedRows > 0) {
+      res.json({ message: "User info updated successfully" });
+    } else {
+      res.status(404).json({ error: "User not found" });
+    }
+  });
+});
+
 // Start the server
 app.listen(3000, () => {
   console.log("Server is running on port 3000");
@@ -139,7 +198,7 @@ app.get("/api/orders", authenticateToken, (req, res) => {
 //GET pour récupérer l'ensemble des ORDERPRODUCTS d'un USER
 app.get("/api/orderProducts", authenticateToken, (req, res) => {
   const query = `
-    SELECT OrderProducts.productId, OrderProducts.quantity
+    SELECT OrderProducts.productId, OrderProducts.quantity, OrderProducts.orderId
     FROM OrderProducts
     INNER JOIN Orders ON Orders.id = OrderProducts.orderId
     WHERE Orders.userId = ?
@@ -152,12 +211,12 @@ app.get("/api/orderProducts", authenticateToken, (req, res) => {
     if (results.length > 0) {
       res.json(results); // Renvoie les produits associés aux commandes de l'utilisateur
     } else {
-      res.status(404).json({ error: "No product references found for the user" });
+      res
+        .status(404)
+        .json({ error: "No product references found for the user" });
     }
   });
 });
-
-
 
 //GET pour récuperer l'ensemble des PRODUCTS
 app.get("/api/products", (req, res) => {
